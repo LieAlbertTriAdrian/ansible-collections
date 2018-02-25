@@ -1,0 +1,60 @@
+---
+- name: Ansible for Kafka Installation
+  hosts: kafka
+  gather_facts: no # to turn off setup
+  pre_tasks:
+    - name: 'install python2'
+      raw: sudo apt-get -f install && sudo apt-get -y install python-simplejson
+  tasks:
+    - name: Get EC2 public DNS
+      shell: "curl http://169.254.169.254/latest/meta-data/public-hostname"
+      register: public_dns
+    - name: Get EC2 public IP
+      shell: "curl http://169.254.169.254/latest/meta-data/public-ipv4"
+      register: public_ip
+    - name: Change hostname of EC2 instance
+      become: yes
+      become_method: sudo
+      shell: "hostname {{ public_dns.stdout }}"
+    - name: Add public DNS and IP in /etc/hosts
+      become: yes
+      become_method: sudo
+      shell: "sed -i '1i{{ public_ip.stdout }} {{ public_dns.stdout }}' /etc/hosts"
+    - name: Add java apt repository
+      become: yes
+      become_method: sudo
+      shell: "{{ item }}"
+      with_items: 
+        - apt-add-repository ppa:webupd8team/java
+        - apt-get update
+    - name: Accept Java 8 License
+      become: yes
+      debconf: name='oracle-java8-installer' question='shared/accepted-oracle-license-v1-1' value='true' vtype='select'
+    - name: install java and others
+      become: yes
+      become_method: sudo
+      apt: name={{ item }} update_cache=yes state=latest
+      with_items: 
+        - oracle-java8-installer
+        - ca-certificates
+        - oracle-java8-set-default
+        - zookeeperd
+    - name: Get Kafka directory existence
+      stat: path=/home/ubuntu/kafka
+      register: kafka_dir
+    - name: Download kafka binary and extract it
+      shell: "{{ item }}"
+      when: kafka_dir.stat.isdir is not defined
+      with_items: 
+        - wget "http://mirror.cc.columbia.edu/pub/software/apache/kafka/0.8.2.1/kafka_2.11-0.8.2.1.tgz" -O /home/ubuntu/kafka.tgz
+        - tar -xvzf kafka.tgz
+        - mv kafka_2.11-0.8.2.1 kafka
+    - name: Copy Kafka configuration
+      copy: src={{ item.src }} dest={{ item.dest }}
+      with_items:
+        - { src: 'server.properties', dest: '/home/ubuntu/kafka/config/server.properties' }
+    - name: Run Kafka
+      shell: "{{ item }}"
+      when: kafka_dir.stat.isdir is defined
+      with_items: 
+        - KAFKA_HEAP_OPTS="-Xmx512m -Xms512m" /home/ubuntu/kafka/bin/kafka-server-start.sh -daemon /home/ubuntu/kafka/config/server.properties

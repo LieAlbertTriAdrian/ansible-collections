@@ -1,0 +1,23 @@
+---
+- name: Ansible for MongoDB Installation
+  hosts: myhost
+
+  tasks:
+    - name: import mongoDB GPG public key
+      become: yes
+      become_method: sudo
+      shell: "{{ item }}"
+      with_items: 
+        - apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 7F0CEB10
+    - name: create mongoDB list file
+      become: yes
+      become_method: sudo
+      shell: "{{ item }}"
+      with_items: 
+        - echo "deb http://repo.mongodb.org/apt/ubuntu "$(lsb_release -sc)"/mongodb-org/3.0 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-3.0.list
+    - name: install mongoDB
+      become: yes
+      become_method: sudo
+      apt: name={{ item }} update_cache=yes state=latest
+      with_items: 
+        - mongodb-org

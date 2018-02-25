@@ -1,0 +1,2 @@
+[kafka]
+localhost ansible_host=54.169.204.197 ansible_ssh_user=ubuntu ansible_ssh_private_key_file=~/.ssh/albert-singapore.pem ansible_python_interpreter=/usr/bin/python

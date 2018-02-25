@@ -1,0 +1,41 @@
+---
+- name: Ansible for NodeJS Installation
+  hosts: myhost
+  # roles: 
+  # - nodejs
+  # sudo: yes
+  gather_facts: no # to turn off setup
+  pre_tasks:
+    - name: 'install python2'
+      raw: sudo apt-get -y install python-simplejson
+  vars:
+    - n_dir: /home/alberttriadrian/n
+    - private_key: /home/alberttriadrian/.ssh/id_rsa
+
+  tasks:
+  # - name: run ansible galaxy
+  #   local_action: command ansible-galaxy install -r requirements.yml --ignore-errors
+    - name: install dependencies
+      become: yes
+      become_method: sudo
+      apt: name={{ item }} update_cache=yes state=latest
+      with_items: 
+        - curl
+        - make
+        - git
+    - name: clone n node version management repository
+      git: repo=git@github.com:tj/n.git
+           dest={{ n_dir }}
+           update=yes
+           force=yes
+           accept_hostkey=yes 
+           key_file={{ private_key }}
+    - name: install n node version management
+      become: yes
+      become_method: sudo
+      shell: "{{ item }}"
+      args: 
+        chdir: "{{ n_dir }}"
+      with_items: 
+        - make install
+        - n stable

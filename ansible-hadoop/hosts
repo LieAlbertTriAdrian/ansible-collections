@@ -1,0 +1,8 @@
+[hadoop_master]
+hadoop-master ansible_host=54.255.192.182 ansible_ssh_user=ubuntu ansible_ssh_private_key_file=~/.ssh/albert-singapore.pem ansible_python_interpreter=/usr/bin/python
+hadoop-master-2 ansible_host=54.255.171.217 ansible_ssh_user=ubuntu ansible_ssh_private_key_file=~/.ssh/albert-singapore.pem ansible_python_interpreter=/usr/bin/python
+hadoop-master-3 ansible_host=13.228.78.209 ansible_ssh_user=ubuntu ansible_ssh_private_key_file=~/.ssh/albert-singapore.pem ansible_python_interpreter=/usr/bin/python
+
+[hadoop_slaves]
+ec2-52.77.231.142.ap-southeast-1.compute.amazonaws.com ansible_host=52.77.231.142 ansible_ssh_user=ubuntu ansible_ssh_private_key_file=~/.ssh/albert-singapore.pem ansible_python_interpreter=/usr/bin/python
+ec2-54-255-178-24.ap-southeast-1.compute.amazonaws.com ansible_host=54.255.178.24 ansible_ssh_user=ubuntu ansible_ssh_private_key_file=~/.ssh/albert-singapore.pem ansible_python_interpreter=/usr/bin/python

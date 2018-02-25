@@ -1,0 +1,28 @@
+---
+- name: Ansible for Cassandra Installation
+  hosts: myhost
+
+  tasks:
+    # install java
+    # echo deb must create new file each process
+    - name: Adding cassandra repository to apt
+      become: yes
+      become_method: sudo
+      shell: "{{ item }}"
+      with_items: 
+        - echo "deb http://www.apache.org/dist/cassandra/debian 22x main" | tee -a /etc/apt/sources.list.d/cassandra.sources.list
+        - echo "deb-src http://www.apache.org/dist/cassandra/debian 22x main" | tee -a /etc/apt/sources.list.d/cassandra.sources.list
+    - name: Adding public keys from apache software foundation
+      become: yes
+      become_method: sudo
+      shell: "{{ item }}"
+      with_items: 
+        - gpg --keyserver pgp.mit.edu --recv-keys F758CE318D77295D && gpg --export --armor F758CE318D77295D | apt-key add -
+        - gpg --keyserver pgp.mit.edu --recv-keys 2B5C1B00 && gpg --export --armor 2B5C1B00 | apt-key add -
+        - gpg --keyserver pgp.mit.edu --recv-keys 0353B12C && gpg --export --armor 0353B12C | apt-key add -
+    - name: install cassandra
+      become: yes
+      become_method: sudo
+      apt: name={{ item }} update_cache=yes state=latest
+      with_items: 
+        - cassandra

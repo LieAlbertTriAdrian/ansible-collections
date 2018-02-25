@@ -1,0 +1,87 @@
+---
+- name: Ansible for Hadoop Master Installation
+  hosts: hadoop_master
+  gather_facts: no # to turn off setup
+  pre_tasks:
+    - name: 'install python2'
+      raw: sudo apt-get -f install && sudo apt-get -y install python-simplejson
+  tasks:
+    - name: Get EC2 public DNS
+      shell: "curl http://169.254.169.254/latest/meta-data/public-hostname"
+      register: public_dns
+    - name: Get EC2 public IP
+      shell: "curl http://169.254.169.254/latest/meta-data/public-ipv4"
+      register: public_ip
+    - name: Change hostname of EC2 instance
+      become: yes
+      become_method: sudo
+      shell: "hostname {{ public_dns.stdout }}"
+    - name: Add public DNS and IP in /etc/hosts
+      become: yes
+      become_method: sudo
+      shell: "sed -i '1i{{ public_ip.stdout }} {{ public_dns.stdout }}' /etc/hosts"
+    - name: Add java apt repository
+      become: yes
+      become_method: sudo
+      shell: "{{ item }}"
+      with_items: 
+        - apt-add-repository ppa:webupd8team/java
+        - apt-get update
+    - name: Accept Java 8 License
+      become: yes
+      debconf: name='oracle-java8-installer' question='shared/accepted-oracle-license-v1-1' value='true' vtype='select'
+    - name: install java and others
+      become: yes
+      become_method: sudo
+      apt: name={{ item }} update_cache=yes state=latest
+      with_items: 
+        - oracle-java8-installer
+        - ca-certificates
+        - oracle-java8-set-default
+    - name: Add Hadoop environment
+      shell: "{{ item }}"
+      with_items: 
+        - export JAVA_HOME=/usr/lib/jvm/java-8-oracle
+        - export HADOOP_HOME=/usr/local/hadoop
+        - export PATH=$PATH:$HADOOP_HOME/bin
+        - export PATH=$PATH:$HADOOP_HOME/sbin
+        - export HADOOP_MAPRED_HOME=$HADOOP_HOME
+        - export HADOOP_COMMON_HOME=$HADOOP_HOME
+        - export HADOOP_HDFS_HOME=$HADOOP_HOME
+        - export YARN_HOME=$HADOOP_HOME
+        - export HADOOP_COMMON_LIB_NATIVE_DIR=$HADOOP_HOME/lib/native
+        - export HADOOP_OPTS="-Djava.library.path=$HADOOP_HOME/lib"
+    - name: Get Hadoop directory existence
+      stat: path=/usr/local/hadoop
+      register: hadoop_dir
+    - name: Download Hadoop binary and extract it
+      shell: "{{ item }}"
+      become: yes
+      become_method: sudo
+      when: hadoop_dir.stat.isdir is not defined
+      with_items: 
+        - wget http://apache.repo.unpas.ac.id/hadoop/common/hadoop-2.7.3/hadoop-2.7.3.tar.gz
+        - tar -xzvf hadoop-2.7.3.tar.gz
+        - mv hadoop-2.7.3 hadoop
+        - mv hadoop /usr/local
+        - mkdir -p /usr/local/hadoop_tmp/hdfs/namenode
+        - mkdir -p /usr/local/hadoop_tmp/hdfs/datanode
+    - name: Copy Hadoop configuration
+      become: yes
+      become_method: sudo
+      copy: src={{ item.src }} dest={{ item.dest }}
+      with_items:
+        - { src: 'hadoop-env.sh', dest: '/usr/local/hadoop/etc/hadoop/hadoop-env.sh' }
+        - { src: 'core-site.xml', dest: '/usr/local/hadoop/etc/hadoop/core-site.xml' }
+        - { src: 'hdfs-site.xml', dest: '/usr/local/hadoop/etc/hadoop/hdfs-site.xml' }
+        - { src: 'mapred-site.xml', dest: '/usr/local/hadoop/etc/hadoop/mapred-site.xml' }
+        - { src: 'yarn-site.xml', dest: '/usr/local/hadoop/etc/hadoop/yarn-site.xml' }
+        - { src: 'core-site.xml', dest: '/usr/local/hadoop/etc/hadoop/core-site.xml' }
+        - { src: 'slaves', dest: '/usr/local/hadoop/etc/hadoop/slaves' }
+    - name: Run Hadoop
+      shell: "{{ item }}"
+      become: yes
+      become_method: sudo
+      when: hadoop_dir.stat.isdir is defined
+      with_items: 
+        - /usr/local/hadoop/sbin/start-all.sh

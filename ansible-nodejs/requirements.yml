@@ -1,0 +1,4 @@
+# nodejs role
+- src: https://github.com/nodesource/ansible-nodejs-role
+  version: 592a239dca52e1c5ff79cfefd0072efe3831428e
+  name: nodejs

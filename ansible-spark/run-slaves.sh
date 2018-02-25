@@ -1,0 +1,1 @@
+ansible-playbook --limit 'all:!spark_master' playbook.yml
